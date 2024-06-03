@@ -215,13 +215,11 @@ CREATE TABLE instrument_classification_types (
     CREATED_BY VARCHAR(255) DEFAULT 'System',  
 );
 
--- #INSTRUMENT #CLASSIFICATION #RELATIONSHIP
-CREATE TABLE instrument_classification (
-    INSTRUMENT_ID INTEGER NOT NULL UNIQUE,
-    FOREIGN KEY (INSTRUMENT_ID) REFERENCES instruments(ID),
+-- #INSTRUMENT #CLASSIFICATION
+CREATE TABLE instrument_classifications(
     INSTRUMENT_CLASSIFICATION_TYPE_ID INTEGER NOT NULL,
     FOREIGN KEY (INSTRUMENT_CLASSIFICATION_TYPE_ID) REFERENCES instrument_classification_types(ID),
-    CLASSIFICATION = VARCHAR(255) NOT NULL,
+    VALUE = VARCHAR(255) NOT NULL,
     
     VALID_FROM DATE DEFAULT CURRENT_DATE,
     VALID_TO DATE DEFAULT '3000-12-31',
@@ -233,6 +231,17 @@ CREATE TABLE instrument_classification (
     -- Only one classification per instrument per classification type per valid from date
     UNIQUE (INSTRUMENT_ID, INSTRUMENT_CLASSIFICATION_TYPE_ID, VALID_FROM)
 );
+
+-- #INSTRUMENT #CLASSIFICATION #RELATIONSNHIP
+CREATE TABLE instrument_classification_relationship (
+    INSTRUMENT_ID INTEGER NOT NULL UNIQUE,
+    FOREIGN KEY (INSTRUMENT_ID) REFERENCES instruments(ID),
+    CLASSIFICATION_ID INTEGER NOT NULL UNIQUE
+)
+
+CREATE TABLE strategy_methodology_relationship (
+    
+)
 
 CREATE VIEW view_instrument_identifiers AS (
 SELECT s.ID, sid.NAME, si.VALUE
