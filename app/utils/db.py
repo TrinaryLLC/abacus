@@ -73,8 +73,10 @@ class db:
     # METHODLOGY ####################################################################################################
     # Get methodology types
     def get_methodology_types(self) -> list[str]:
-        return self.get("SELECT DISTINCT NAME FROM methodology_types WHERE VALID_FROM<=current_date() AND VALID_TO>=current_date();")
+        m_types = self.get("SELECT DISTINCT NAME FROM methodology_types WHERE VALID_FROM<=current_date() AND VALID_TO>=current_date();")
+        return list(m_types.get('VALUE', []))
     
+    ##################################################################################################################    
     def dict_to_sql(self, table_name, conditions:dict=None) -> str:        
         if not conditions:
             return f"SELECT * FROM {table_name}"

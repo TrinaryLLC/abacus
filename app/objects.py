@@ -1,5 +1,5 @@
 from typing import List, Tuple
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class MethodologyType(BaseModel):
     name: str
@@ -8,9 +8,9 @@ class MethodologyType(BaseModel):
 class Methodology(BaseModel):
     name: str
     type: MethodologyType
-    function_repo: str
-    function_branch: str
-    function_file: str
+    function_repo: str = Field(default='https://github.com/TrinaryLLC/abacus')
+    function_branch: str = Field(default='main')
+    function_file: str = Field(default='methodology.py')
     function_name: str
     function_description: str
 
