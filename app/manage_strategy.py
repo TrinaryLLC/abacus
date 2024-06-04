@@ -7,11 +7,10 @@ from utils.db import db
 db=db()
 
 # List all strategies to select from
-def select_from_list():
+def select_strategy_from_list():
     q = []
     # Get list of db.get_strategies() and populate inquirer choices
-    strategies = db.get_strategies()    
-    q.append(inquirer.List('strategy', message='Select a strategy', choices=[[strategy['name'] for strategy in strategies]]))
+    q.append(inquirer.List('strategy', message='Select a strategy', choices=db.get_strategy_names()))
     answers = inquirer.prompt(q, theme=GreenPassion())
     print(answers)
 
@@ -40,6 +39,6 @@ def select_from_list():
 #     print(strategy)
 
 if __name__ == '__main__':
-    select_from_list()
+    select_strategy_from_list()
     # create()
     

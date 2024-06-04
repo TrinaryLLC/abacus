@@ -1,7 +1,7 @@
 import argparse
 import datetime
 from pathlib import Path
-from strategy.Strategy import Strategy
+from manage_strategy import select_strategy_from_list
 
 parser = argparse.ArgumentParser(
     prog="abacus",
@@ -40,7 +40,7 @@ for entry in target_dir.iterdir():
     print(build_output(entry, long=args.long))
 
 def main():
-    ...
+    select_strategy_from_list()
 
 if __name__ == '__main__':
     main()

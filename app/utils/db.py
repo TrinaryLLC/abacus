@@ -53,16 +53,16 @@ class db:
         return self.get("SELECT DISTINCT NAME FROM strategy_types WHERE VALID_FROM<=current_date() AND VALID_TO>=current_date();")
 
     # Get all strategies
-    def get_strategies(self) -> list[Strategy]:        
-        # CHANGE TO SELECT ID
-        strategies = self.get(f"SELECT * FROM view_instrument_identifiers WHERE NAME='name'")        
-        z = {k:strategies[k][0] for k in strategies.keys()}
-        # WRITE VIEW TO RETURN EVERYTHING NEEDED TO CREATE STRATEGY
-        return [Strategy(**row) for row in strategies]
+    def get_strategy_names(self) -> list[str]:        
+        strategies = self.get(f"SELECT * FROM view_strategy_identifiers WHERE NAME='name'")        
+        return list(strategies.get('VALUE', []))
+        #return [Strategy(**row) for row in strategies]
     
-    # Get strategy
+    def get_strategy_by_name(self, strategy_name:str, tart:date=None, stop:date=None) -> Strategy:
+        return self.execute("SELECT * FROM strategy WHERE strategy_type = ?;", (strategy_name,))
+    
     def create_strategy(self, strat:dict, tart:date=None, stop:date=None):
-        return self.execute("SELECT * FROM strategy WHERE strategy_type = ?;", (strategy_type,))
+        return self.execute("SELECT * FROM strategy WHERE strategy_type = ?;", (strat))
 
     # Get strategy by id
     def get_strategy_by_id(self, strategy_id):
