@@ -1,7 +1,7 @@
 import argparse
 import datetime
 from pathlib import Path
-from manage_strategy import select_strategy_from_list
+from app.manager import select_strategy_from_list
 
 parser = argparse.ArgumentParser(
     prog="abacus",
