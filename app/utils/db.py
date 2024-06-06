@@ -30,22 +30,24 @@ class db:
         :param conditions: A dictionary where keys are column names and values are the conditions.
         :return: A SQL query string.
     """
-    def get(self, query:str):
-        with ddb.connect(self.db_loc) as con:
-            result = con.execute(query).fetchall()
-        return None if all(len(arr) == 0 for arr in result.values()) else result                
+    # def get(self, query:str):
+    #     with ddb.connect(self.db_loc) as con:
+    #         result = con.execute(query).fetchall()
+    #     return None if all(len(arr) == 0 for arr in result.values()) else result                
     
-    def post(self, query):
-        with ddb.connect(self.db_loc) as con:
-            pass
+    # def post(self, query:str):
+    #     with ddb.connect(self.db_loc) as con:
+    #         result = con.execute(query)
+    #         result = con.commit().fetchone()
+    #     return None if all(len(arr) == 0 for arr in result.values()) else result
     
-    def put(self, sql:str) -> None:
-        with ddb.connect(self.db_loc) as con:
-            con.execute(sql)
-            con.commit()
+    # def put(self, sql:str) -> None:
+    #     with ddb.connect(self.db_loc) as con:
+    #         con.execute(sql)
+    #         con.commit()
 
-    def delete(self, query):
-        ...
+    # def delete(self, query):
+    #     ...
     
     # STRATEGY ####################################################################################################
     # Get strategy types
@@ -55,14 +57,35 @@ class db:
     # Get all strategies
     def get_strategy_names(self) -> list[str]:        
         strategies = self.get(f"SELECT * FROM view_strategy_identifiers WHERE NAME='name'")        
-        return list(strategies.get('VALUE', []))
+        return [x['VALUE'] for x in strategies]
         #return [Strategy(**row) for row in strategies]
     
     def get_strategy_by_name(self, strategy_name:str, tart:date=None, stop:date=None) -> Strategy:
         return self.execute("SELECT * FROM strategy WHERE strategy_type = ?;", (strategy_name,))
     
-    def create_strategy(self, strat:dict, tart:date=None, stop:date=None):
-        return self.execute("SELECT * FROM strategy WHERE strategy_type = ?;", (strat))
+    def get_strategy_identifier_type(self, name:str, create_if_not_exists:bool=True) -> int:
+        id_type = self.get(f"SELECT ID FROM strategy_identifier_types WHERE NAME='{name.lower()}'")
+        if id_type:
+            return id_type[0]['ID'] if id_type else None
+        elif create_if_not_exists:
+            return self.create_strategy_identifier_type(name)
+        else:
+            return None
+    
+    def create_strategy_identifier_type(self, name:str) -> int:
+        id_type = self.post(f"INSERT INTO strategy_identifier_types (NAME) VALUES ('{name}') RETURNING ID")
+        return id_type['ID'][0]
+    
+    def create_strategy_identifier(self, type:str, value:str) -> int:
+        id_type = self.get_strategy_identifier_type(type)        
+        return self.post(f"INSERT INTO strategy_identifier (TYPE_ID, VALUE) VALUES ({id_type}, '{value}') RETURNING ID")
+            
+    def create_strategy(self, strat:dict=None, start:date=None, stop:date=None) -> int:
+        strategy_id = self.post(f"INSERT INTO strategies (VALID_FROM) VALUES(current_date()) RETURNING ID")                
+        if strat:
+            id_keys = [self.create_strategy_identifier(key, value) for key, value in strat.items()]
+            [self.post(f"INSERT INTO strategy_identifier_relationship (STRATEGY_ID, STRATEGY_IDENTIFIER_ID, TYPE) VALUES ({strategy_id}, {id_key}, 'REFERENCES')") for id_key in id_keys]        
+        return strategy_id
 
     # Get strategy by id
     def get_strategy_by_id(self, strategy_id):
@@ -74,8 +97,18 @@ class db:
     # Get methodology types
     def get_methodology_types(self) -> list[str]:
         m_types = self.get("SELECT DISTINCT NAME FROM methodology_types WHERE VALID_FROM<=current_date() AND VALID_TO>=current_date();")
-        return list(m_types.get('VALUE', []))
+        return [type['NAME'] for type in m_types]
     
+    def get_methodology_by_type(self, type:str) -> list[dict]:
+        return self.get(f"SELECT * FROM methodologies WHERE TYPE_ID = (SELECT ID FROM methodology_types WHERE NAME='{type.lower()}')")
+    
+    def get_methodology_type_by_name(self, name:str) -> int:
+        id_type = self.get(f"SELECT ID FROM methodology_types WHERE NAME='{name.lower()}'")
+        return id_type[0]['ID'] if id_type else None
+
+    def create_methodology_type(self, name:str) -> int:
+        id_type = self.post(f"INSERT INTO methodology_types (NAME) VALUES ('{name.lower()}') RETURNING ID")
+        return id_type['ID'][0]
     ##################################################################################################################    
     def dict_to_sql(self, table_name, conditions:dict=None) -> str:        
         if not conditions:
@@ -85,14 +118,16 @@ class db:
                                     else f"{key}={value}" for key, value in conditions.items()])
         return f"SELECT * FROM {table_name} WHERE {where_clause}"
 
-    def get(self, query:str):
+    def get(self, query:str) -> list[dict]:
         with ddb.connect(self.db_loc) as con:
-            result = con.execute(query).fetchnumpy()
-        return None if all(len(arr) == 0 for arr in result.values()) else result                
+            rows = con.execute(query).fetchall()
+            column_names = [desc[0] for desc in con.description]
+        return None if len(rows) == 0 else [dict(zip(column_names, row)) for row in rows]                
     
-    def post(self, query):
+    def post(self, query:str):
         with ddb.connect(self.db_loc) as con:
-            pass
+            result = con.execute(query).fetchone()
+        return result[0] if result else None
     
     def put(self, sql:str) -> None:
         with ddb.connect(self.db_loc) as con:

@@ -5,15 +5,23 @@ from objects import Strategy, MethodologyType, Methodology
 
 from utils.db import db
 db=db()
-def create_methodology():
+def create_methodology_type():
+    q = []
+    q.append(inquirer.Text('name', message=f"Please enter a name for the new methodology type"))
+    answers = inquirer.prompt(q, theme=GreenPassion())
+    return db.create_methodology_type(answers['name'])
+
+def create_methodology(strategy_id=None):
     # Select methodology type
     q = []
     choices = db.get_methodology_types()
     choices.append('**New**')
+    if strategy_id:
+        ... # TODO: Filter exsiting methodologies
     q.append(inquirer.List('methodology_type', message='Select a methodology type', choices=choices))
     answers = inquirer.prompt(q, theme=GreenPassion())
-    if answers['methodology_type'] == '**New**':
-        create_methodology()
+    meth_type = create_methodology_type() if answers['methodology_type'] == '**New**' else db.get_methodology_type_by_name(answers['methodology_type'])
+    #TODO: fill-in and SAVE METHODOLOGY
 
 def create_strategy():
     q = []
@@ -24,18 +32,18 @@ def create_strategy():
             else:
                 q.append(inquirer.Text(field[0], message=f"Strategy {field[0]}"))
         elif field[1].annotation == bool:
-            q.append(inquirer.Checkbox(field[0], message=f"Strategy {field[0]}", choices=["yes", "no"], default=field[1].default))
+            q.append(inquirer.Checkbox(field[0], message=f"Strategy {field[0]}", choices=["yes", "no"], default=field[1].default))        
+    answers = inquirer.prompt(q, theme=GreenPassion())
+    strategy_id = db.create_strategy(answers)
+    q=[]
     q.append(inquirer.List('add_methodology', message='Add Methodology Now?', choices=["yes", "no"]))        
-
     answers = inquirer.prompt(q, theme=GreenPassion())
     while answers['add_methodology'] == 'yes':
-        create_methodology()
-        q.append(inquirer.List('add_methodology', message='Add another Methodology?'), choices=["yes", "no"])        
-        print('List methodologies here:')
+        q = []
+        create_methodology(strategy_id=strategy_id)
+        q.append(inquirer.List('add_methodology', message='Add another Methodology?', choices=["yes", "no"]))        
         answers = inquirer.prompt(q, theme=GreenPassion())
-    strategy = Strategy(**answers)
-    id = db.create_strategy(answers)
-    print(strategy)
+
 # List all strategies to select from
 def select_strategy_from_list():
     q = []
