@@ -56,7 +56,7 @@ class db:
 
     # Get all strategies
     def get_strategy_names(self) -> list[str]:        
-        strategies = self.get(f"SELECT * FROM view_strategy_identifiers WHERE NAME='name'")        
+        strategies = self.get("SELECT * FROM view_strategy_identifiers WHERE NAME='name'")        
         return [x['VALUE'] for x in strategies]
         #return [Strategy(**row) for row in strategies]
     
@@ -64,7 +64,7 @@ class db:
         return self.execute("SELECT * FROM strategy WHERE strategy_type = ?;", (strategy_name,))
     
     def get_strategy_identifier_type(self, name:str, create_if_not_exists:bool=True) -> int:
-        id_type = self.get(f"SELECT ID FROM strategy_identifier_types WHERE NAME='{name.lower()}'")
+        id_type = self.get("SELECT ID FROM strategy_identifier_types WHERE NAME='?'", (name.lower(),))
         if id_type:
             return id_type[0]['ID'] if id_type else None
         elif create_if_not_exists:
@@ -73,18 +73,18 @@ class db:
             return None
     
     def create_strategy_identifier_type(self, name:str) -> int:
-        id_type = self.post(f"INSERT INTO strategy_identifier_types (NAME) VALUES ('{name}') RETURNING ID")
+        id_type = self.post("INSERT INTO strategy_identifier_types (NAME) VALUES ('?') RETURNING ID", (name,))
         return id_type['ID'][0]
     
     def create_strategy_identifier(self, type:str, value:str) -> int:
         id_type = self.get_strategy_identifier_type(type)        
-        return self.post(f"INSERT INTO strategy_identifier (TYPE_ID, VALUE) VALUES ({id_type}, '{value}') RETURNING ID")
+        return self.post("INSERT INTO strategy_identifier (TYPE_ID, VALUE) VALUES (?, '?') RETURNING ID", (id_type, value))
             
     def create_strategy(self, strat:dict=None, start:date=None, stop:date=None) -> int:
-        strategy_id = self.post(f"INSERT INTO strategies (VALID_FROM) VALUES(current_date()) RETURNING ID")                
+        strategy_id = self.post("INSERT INTO strategies (VALID_FROM) VALUES(current_date()) RETURNING ID")                
         if strat:
             id_keys = [self.create_strategy_identifier(key, value) for key, value in strat.items()]
-            [self.post(f"INSERT INTO strategy_identifier_relationship (STRATEGY_ID, STRATEGY_IDENTIFIER_ID, TYPE) VALUES ({strategy_id}, {id_key}, 'REFERENCES')") for id_key in id_keys]        
+            [self.post("INSERT INTO strategy_identifier_relationship (STRATEGY_ID, STRATEGY_IDENTIFIER_ID, TYPE) VALUES (?, ?, 'REFERENCES')", (strategy_id, id_key)) for id_key in id_keys]
         return strategy_id
 
     # Get strategy by id
@@ -100,23 +100,23 @@ class db:
         return [type['NAME'] for type in m_types]
     
     def get_methodology_by_type(self, type:str) -> list[dict]:
-        return self.get(f"SELECT * FROM methodologies WHERE TYPE_ID = (SELECT ID FROM methodology_types WHERE NAME='{type.lower()}')")
+        return self.get("SELECT * FROM methodologies WHERE TYPE_ID = (SELECT ID FROM methodology_types WHERE NAME='?')", (type.lower(),))
     
     def get_methodology_type_by_name(self, name:str) -> int:
-        id_type = self.get(f"SELECT ID FROM methodology_types WHERE NAME='{name.lower()}'")
+        id_type = self.get("SELECT ID FROM methodology_types WHERE NAME='?'", (name.lower(),))
         return id_type[0]['ID'] if id_type else None
 
     def create_methodology_type(self, name:str) -> int:
-        id_type = self.post(f"INSERT INTO methodology_types (NAME) VALUES ('{name.lower()}') RETURNING ID")
-        return id_type['ID'][0]
+        id_type = self.post("INSERT INTO methodology_types (NAME) VALUES ('?') RETURNING ID", (name.lower(),))
+        return id_type
     ##################################################################################################################    
     def dict_to_sql(self, table_name, conditions:dict=None) -> str:        
         if not conditions:
-            return f"SELECT * FROM {table_name}"
+            return "SELECT * FROM ?", (table_name,)
 
         where_clause = " AND ".join([f"{key}='{value}'" if isinstance(value, str) 
                                     else f"{key}={value}" for key, value in conditions.items()])
-        return f"SELECT * FROM {table_name} WHERE {where_clause}"
+        return "SELECT * FROM ? WHERE ?", (table_name, where_clause)
 
     def get(self, query:str) -> list[dict]:
         with ddb.connect(self.db_loc) as con:
@@ -138,7 +138,7 @@ class db:
         ...
 
     def read_dir(self, directory:str, file_type:str):
-        query = ddb.execute(f"SELECT * FROM '{directory}*.{file_type}';")
+        query = ddb.execute("SELECT * FROM '?*.?';", (directory, file_type))
         record_batch_reader = query.fetch_record_batch()
         try:
             while True:
