@@ -114,7 +114,9 @@ def select_strategy_from_list():
 if __name__ == '__main__':
     q = []
     init_options = ['Manage Strategies', 'Manage Methodologies', 'Manage Instruments']
-    q.append(inquirer.List('add_methodology', message='Add another Methodology?', choices=init_options))        
-    select_strategy_from_list()
+    q.append(inquirer.List('SELECT_OBJECT', message='What would you like to do?', choices=init_options))        
+    answers = inquirer.prompt(q, theme=GreenPassion())
+    if answers['SELECT_OBJECT'] == 'Manage Strategies':
+        select_strategy_from_list()
     # create()
     
