@@ -83,40 +83,45 @@ def select_strategy_from_list():
     q.append(inquirer.List('strategy_name', message='Select a strategy', choices=choices))
     answers = inquirer.prompt(q, theme=GreenPassion())
     if answers['strategy_name'] == '**New**':
-        create_strategy()
+        strategy_id = create_strategy()
     else:
-        db.get_strategy_by_name(answers['strategy_name'])
+        strategy_id = db.get_strategy_id_by_name(answers['strategy_name'])
+    strategy_actions(strategy_id)
 
-# def create():
-#     print('**** New Strategy ****')
-#     q = []
-#     for field in Strategy.model_fields.items():
-#         if field[1].annotation == str:
-#             if str(field[1].default) != 'PydanticUndefined':
-#                 q.append(inquirer.Text(field[0], message=field[0], default=field[1].default))
-#             else:
-#                 q.append(inquirer.Text(field[0], message=field[0]))        
-#         elif field[1].annotation == bool:
-#             q.append(inquirer.Checkbox(field[0], message=field[0], choices=["yes", "no"], default=field[1].default))
-#         elif field[1].annotation == CalcMethodology:
-#             q.append(inquirer.List(field[0], message=field[0], choices=list(CalcMethodology)))
-#         elif field[1].annotation == RebalMethodology:
-#             q.append(inquirer.List(field[0], message=field[0], choices=list(RebalMethodology)))
-#         elif field[1].annotation == List[ClassificationMethodology]:
-#             q.append(inquirer.Checkbox(field[0], message=field[0], choices=list(ClassificationMethodology)))
+# Can parameterize actions later by adding to db.
+def strategy_actions(strategy_id=None):
+    if not strategy_id:
+        strategy_id = select_strategy_from_list()
+    q=[]
+    actions = ['Run', 'Clone', 'Update', 'Delete']
+    q.append(inquirer.List('action', message=f'{db.get_strategy_name_by_id(strategy_id)}', choices=actions))        
+    answers = inquirer.prompt(q, theme=GreenPassion())
+    if answers['action'] == 'Run':
+        print(f"Running strategy {db.get_strategy_name_by_id(strategy_id)}")
+    elif answers['action'] == 'Clone':
+        print(f"Cloning strategy {db.get_strategy_name_by_id(strategy_id)}")
+    elif answers['action'] == 'Update':
+        print(f"Updating strategy {db.get_strategy_name_by_id(strategy_id)}")
+    elif answers['action'] == 'Delete':
+        print(f"Deleting strategy {db.get_strategy_name_by_id(strategy_id)}")
+    else:
+        print(f"Unknown action {answers['action']}")
 
-#     answers = inquirer.prompt(q, theme=GreenPassion())
-#     print(answers)
-#     strategy = Strategy(**answers)
-#     id = db.create_strategy(answers)
-#     print(strategy)
-
-if __name__ == '__main__':
+def main():
     q = []
-    init_options = ['Manage Strategies', 'Manage Methodologies', 'Manage Instruments']
+    init_options = ['Manage Strategies', 'Manage Methodologies', 'Manage Instruments', 'Quit']
     q.append(inquirer.List('SELECT_OBJECT', message='What would you like to do?', choices=init_options))        
     answers = inquirer.prompt(q, theme=GreenPassion())
     if answers['SELECT_OBJECT'] == 'Manage Strategies':
         select_strategy_from_list()
-    # create()
-    
+    if answers['SELECT_OBJECT'] == 'Manage Methodologies':
+        select_methodology()
+    if answers['SELECT_OBJECT'] == 'Manage Instruments':
+        ...
+    if answers['SELECT_OBJECT'] == 'Quit':
+        print("Quitting")
+        exit(0)
+
+if __name__ == '__main__':
+    while True:
+        main()

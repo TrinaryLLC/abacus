@@ -88,11 +88,11 @@ class db:
             [self.post("INSERT INTO strategy_identifier_relationship (STRATEGY_ID, STRATEGY_IDENTIFIER_ID, TYPE) VALUES (?, ?, 'REFERENCES')", (strategy_id, id_key)) for id_key in id_keys]
         return strategy_id
 
-    # Get strategy by id
-    def get_strategy_by_id(self, strategy_id):
-        return self.execute("SELECT * FROM strategy WHERE id = ?;", (strategy_id,))
+    def get_strategy_name_by_id(self, strategy_id):
+        name = self.get("SELECT VALUE FROM view_strategy_identifiers WHERE NAME='name' and ID=?", (strategy_id,))
+        return name[0]['VALUE']
     
-    def get_strategy_by_name(self, strategy_name:str, tart:date=None, stop:date=None):
+    def get_strategy_id_by_name(self, strategy_name:str, tart:date=None, stop:date=None):
         return self.get(f"SELECT STRATEGY_ID FROM strategy_identifier_relationship WHERE STRATEGY_IDENTIFIER_ID = (SELECT ID FROM strategy_identifier WHERE VALUE='{strategy_name}' and TYPE_ID=1000000)")
     # METHODLOGY ####################################################################################################
     # Get methodology types
