@@ -104,7 +104,7 @@ class db:
         return self.post("INSERT INTO strategy_identifier (TYPE_ID, VALUE) VALUES (?, ?) RETURNING ID", [id_type, value])
             
     def create_strategy(self, strat: Optional[Dict] = None, start: Optional[date] = None, stop: Optional[date] = None) -> int:
-        strategy_id = self.post("INSERT INTO strategies (VALID_FROM) VALUES(current_date()) RETURNING ID")
+        strategy_id = self.post("INSERT INTO strategy (VALID_FROM) VALUES(current_date()) RETURNING ID")
         if strat:
             id_keys = [self.create_strategy_identifier(key, value) for key, value in strat.items()]
             for id_key in id_keys:
@@ -121,12 +121,12 @@ class db:
     # Methodology Methods
     def create_methodology(self, type_id: int, meth: Dict) -> int:
         return self.post(
-            "INSERT INTO methodologies (TYPE_ID, FUNCTION_REPO, FUNCTION_BRANCH, FUNCTION_FILE, FUNCTION_NAME, FUNCTION_DESCRIPTION) VALUES (?, ?, ?, ?, ?, ?) RETURNING ID",
+            "INSERT INTO methodology (TYPE_ID, FUNCTION_REPO, FUNCTION_BRANCH, FUNCTION_FILE, FUNCTION_NAME, FUNCTION_DESCRIPTION) VALUES (?, ?, ?, ?, ?, ?) RETURNING ID",
             [type_id, meth['function_repo'], meth['function_branch'], meth['function_file'], meth['function_name'], meth['function_description']]
         )
 
     def get_methodology_id_by_name(self, name: str) -> Optional[int]:
-        id_type = self.get("SELECT ID FROM methodologies WHERE FUNCTION_NAME = ?", [name.lower()])
+        id_type = self.get("SELECT ID FROM methodology WHERE FUNCTION_NAME = ?", [name.lower()])
         return id_type[0]['ID'] if id_type else None
     
     def get_methodology_types(self) -> List[str]:
@@ -134,11 +134,11 @@ class db:
         return [type['NAME'] for type in m_types]
     
     def get_methodology_by_type_id(self, type_id: int) -> List[str]:
-        meths = self.get("SELECT FUNCTION_NAME FROM methodologies WHERE TYPE_ID = ?", [type_id])
+        meths = self.get("SELECT FUNCTION_NAME FROM methodology WHERE TYPE_ID = ?", [type_id])
         return [meth['FUNCTION_NAME'] for meth in meths]
     
     def get_methodology_by_type_name(self, type: str) -> List[str]:
-        meths = self.get("SELECT FUNCTION_NAME FROM methodologies WHERE TYPE_ID = (SELECT ID FROM methodology_types WHERE NAME = ?)", [type.lower()])
+        meths = self.get("SELECT FUNCTION_NAME FROM methodology WHERE TYPE_ID = (SELECT ID FROM methodology_types WHERE NAME = ?)", [type.lower()])
         return [meth['FUNCTION_NAME'] for meth in meths]
     
     def get_methodology_type_id_by_type_name(self, name: str) -> Optional[int]:
@@ -147,3 +147,7 @@ class db:
 
     def create_methodology_type(self, name: str) -> int:
         return self.post("INSERT INTO methodology_types (NAME) VALUES (?) RETURNING ID", [name.lower()])
+    
+    def get_methodology_types_by_strategy_id(self, strategy_id: int) -> List[str]:
+        meths = self.get("SELECT DISTINCT NAME FROM methodology_types WHERE VALID_FROM <= current_date() AND VALID_TO >= current_date() AND ID IN (SELECT TYPE_ID FROM strategy_methodology_relationship WHERE STRATEGY_ID = ?)", [strategy_id])
+        return [type['NAME'] for type in meths]

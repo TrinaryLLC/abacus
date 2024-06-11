@@ -14,7 +14,8 @@ def create_methodology_type() -> int:
 def select_methodology_type(strategy_id: Optional[int] = None) -> int:
     choices = db.get_methodology_types()
     if strategy_id:
-        # TODO: Filter existing methodologies based on strategy_id
+        existing_meths = db.get_methodology_types_by_strategy_id(strategy_id)
+        choices = [meth for meth in choices if meth not in existing_meths]
         pass
     choices.append('**New**')
     
