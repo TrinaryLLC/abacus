@@ -151,7 +151,7 @@ def methodology_actions(methodology_id: Optional[int] = None) -> None:
         print(f"Unknown action {action}")
 
 def main() -> None:
-    init_options = ['Manage Strategy', 'Manage Methodology', 'Manage Instrument', 'Quit']
+    init_options = ['Manage Strategy', 'Manage Methodology', 'Manage Instrument','Manage Classification', 'Quit']
     questions = [inquirer.List('SELECT_OBJECT', message='What would you like to do?', choices=init_options)]
     answers = inquirer.prompt(questions, theme=GreenPassion())
     
@@ -161,6 +161,9 @@ def main() -> None:
     elif selection == 'Manage Methodology':
         select_methodology()
     elif selection == 'Manage Instrument':
+        # Implement this if needed
+        pass
+    elif selection == 'Manage Classification':
         # Implement this if needed
         pass
     elif selection == 'Quit':

@@ -151,3 +151,30 @@ class db:
     def get_methodology_types_by_strategy_id(self, strategy_id: int) -> List[str]:
         meths = self.get("SELECT DISTINCT NAME FROM methodology_types WHERE VALID_FROM <= current_date() AND VALID_TO >= current_date() AND ID IN (SELECT TYPE_ID FROM strategy_methodology_relationship WHERE STRATEGY_ID = ?)", [strategy_id])
         return [type['NAME'] for type in meths]
+    
+    def get_table_schema(db_loc, table_name):
+        with ddb.connect(db_loc) as con:
+            # Query the table schema
+            schema_info = con.execute(f"PRAGMA table_info('{table_name}')").fetchall()
+
+            if not schema_info:
+                raise ValueError(f"Table '{table_name}' does not exist.")
+
+            # Start building the CREATE TABLE statement
+            create_table_stmt = f"CREATE TABLE {table_name} (\n"
+
+            # Loop through the schema information to build column definitions
+            columns = []
+            for column in schema_info:
+                column_name = column[1]
+                column_type = column[2]
+                not_null = " NOT NULL" if column[3] else ""
+                default_value = f" DEFAULT {column[4]}" if column[4] else ""
+                primary_key = " PRIMARY KEY" if column[5] else ""
+
+                columns.append(f"    {column_name} {column_type}{not_null}{default_value}{primary_key}")
+
+            # Join all column definitions and close the statement
+            create_table_stmt += ",\n".join(columns) + "\n);"
+
+        return create_table_stmt
