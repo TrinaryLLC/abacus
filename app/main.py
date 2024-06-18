@@ -1,46 +1,20 @@
-import argparse
-import datetime
-from pathlib import Path
-from app.manager import select_strategy_from_list
+import os
+from dotenv import load_dotenv
+from utils.db import db
+from manager import select_strategy_from_list
 
-parser = argparse.ArgumentParser(
-    prog="abacus",
-    description="Create and calculate indices",
-    epilog="Thanks for using %(prog)s! :)",
-)
-
-
-actions = parser.add_argument_group("actions")
-actions.add_argument("--list", action="store_true")
-actions.add_argument("--strategy", action="store_true")
-actions.add_argument("--new", action="store_true")
-actions.add_argument("--update", action="store_true")
-actions.add_argument("--clone", action="store_true")
-actions.add_argument("--delete", action="store_true")
-
-args = parser.parse_args()
-
-target_dir = Path(args.path)
-
-if not target_dir.exists():
-    print("The target directory doesn't exist")
-    raise SystemExit(1)
-
-def build_output(entry, long=False):
-    if long:
-        size = entry.stat().st_size
-        date = datetime.datetime.fromtimestamp(
-            entry.stat().st_mtime).strftime(
-            "%b %d %H:%M:%S"
-        )
-        return f"{size:>6d} {date} {entry.name}"
-    return entry.name
-
-for entry in target_dir.iterdir():
-    print(build_output(entry, long=args.long))
+load_dotenv()
+db = db()
 
 def main():
-    select_strategy_from_list()
+    # Read in the csv files from source directory
+    data = db.read_dir(os.getenv('file_loc'), 'csv')
+    # Select strategy id from list or hard-code
+    strategy_id = 500000000
+    # Initialization. Add instrument to list and create list and instrument if not exists
+    # {strategy.add_to_basket(x) for x in data}
+    instruments = [{db.add_instrument_to_list(strategy_id, list_name = x['DATE'], instrument_identifier = x['TICKER'], instrument_identifier_type='TICKER', init_mode=True) for x in row} for row in data]
+    print(instruments)
 
 if __name__ == '__main__':
     main()

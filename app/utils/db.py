@@ -99,6 +99,112 @@ class db:
     def create_strategy_identifier_type(self, name: str) -> int:
         return self.post("INSERT INTO strategy_identifier_types (NAME) VALUES (?) RETURNING ID", [name])
 
+    # INSTRUMENT METHODS
+    def get_instrument_type_id_by_name(self, name: str, init_mode: bool = False) -> int:
+        id = self.get("SELECT ID FROM instrument_types WHERE NAME = ?", [name.lower()])
+        if id:
+            return id[0]['ID']
+        elif init_mode:
+            return self.create_instrument_type(name)
+        return None
+
+    def create_instrument_type(self, name: str) -> int:
+        type_id = self.post("INSERT INTO instrument_types (NAME) VALUES (?) RETURNING ID", [name.lower()])
+        return type_id[0]['ID']
+    
+    def get_instrument_id_by_identifier_id(self, type_id: int, init_mode: bool = False) -> int:
+        id = self.get("SELECT ID FROM instruments WHERE TYPE_ID = ?", [type_id])
+        if id:
+            return id[0]['ID']
+        elif init_mode:
+            return self.create_instrument(type_id)
+        return None
+    
+    # TODO: UPDATE QUERY
+    def create_instrument_identifier_type(self, name: str, desc: str = None, valid_from: Optional[date] = None, valid_to: Optional[date] = None) -> int:
+        return self.post(
+                    f"""INSERT INTO instrument_identifier_types 
+                    (NAME, DESCRIPTION, VALID_FROM, VALID_TO) 
+                    VALUES (?, ?, ?, ?) RETURNING ID""", 
+                    [name.lower(), desc, valid_from, valid_to]
+                )
+    
+    #TODO: INCORPORATE VALID_FROM AND VALID_TO
+    def get_instrument_identifier_type_id_by_name(self, type_name:str,  valid_from: Optional[date] = None, valid_to: Optional[date] = None, init_mode: bool = False) -> int:
+        id = self.get("SELECT ID FROM instrument_identifier_types WHERE NAME = ?", [type_name.lower()])
+        if id:
+            return id[0]['ID']
+        elif init_mode:
+            return self.create_instrument_identifier_type(type_name, valid_from, valid_to)
+        return None
+    
+    def instrument_identifier_type_exists(self, name: str) -> bool:
+        return True if self.get("SELECT 1 FROM instrument_identifier_types WHERE NAME = ?", [name.lower()]) else False
+
+    #TODO: INCORPORATE VALID_FROM AND VALID_TO
+    def get_instrument_identifier_id_by_value(self, value: str, type_id: int,  valid_from: Optional[date] = None, valid_to: Optional[date] = None, init_mode: bool = False) -> int:
+        id = self.get("SELECT ID FROM instrument_identifier WHERE VALUE = ? AND TYPE_ID = ?", [value, type_id])
+        if id:
+            return id[0]['ID']
+        elif init_mode:
+            return self.create_instrument_identifier(type_id, value)
+        return None
+    
+    # TODO: UPDATE QUERY
+    def create_instrument_identifier(self, type_id: int, value: str, valid_from: Optional[date] = None, valid_to: Optional[date] = None) -> int:
+        return self.post(
+                    f"""INSERT INTO instrument_identifier 
+                    (TYPE_ID, VALUE, VALID_FROM, VALID_TO) 
+                    VALUES (?, ?, ?, ?) RETURNING ID""", 
+                    [type_id, value, valid_from, valid_to]
+                )
+    
+    def instrument_identifier_exists(self, value:str, type_id:int) -> bool:
+        return True if self.get("SELECT 1 FROM instrument_identifier WHERE VALUE = ? AND TYPE_ID = ?", [value, type_id]) else False
+    
+    #TODO: INCORPORATE VALID_FROM AND VALID_TO
+    def get_instrument_list_id_by_name(self, strategy_id: int, list_name: str, valid_from: Optional[date] = None, valid_to: Optional[date] = None, init_mode: bool = False) -> int:
+        id = self.get("SELECT ID FROM instrument_list WHERE NAME = ?", [list_name])
+        if id:
+            return id[0]['ID']
+        elif init_mode:
+            return self.create_instrument_list(strategy_id, list_name)
+        return None
+
+    # TODO: UPDATE QUERY
+    def create_instrument_list(self, strategy_id: int, list_name: str, desc: str = None, valid_from: Optional[date] = None, valid_to: Optional[date] = None) -> int:
+        list_id = self.post(
+                    f"""INSERT INTO instrument_list 
+                    (NAME, DESCRIPTION,VALID_FROM, VALID_TO) 
+                    VALUES (?, ?, ?, ?) RETURNING ID""", 
+                    [list_name, desc, valid_from, valid_to]
+                )
+        return self.post(
+                    f"""INSERT INTO instrument_list_strategy_relationship
+                    (STRATEGY_ID, LIST_ID) 
+                    VALUES (?, ?) RETURNING LIST_ID""", 
+                    [strategy_id, list_id]
+                )        
+
+    # TODO: UPDATE QUERY
+    def add_instrument_to_instrument_list(self, instrument_id:int, instrument_list_id:int, valid_from: Optional[date] = None, valid_to: Optional[date] = None) -> int:
+        return self.post(
+                    f"""INSERT INTO instrument_list_relationship 
+                    (INSTRUMENT_ID, LIST_ID, VALID_FROM, VALID_TO) 
+                    VALUES (?, ?, ?, ?) RETURNING INSTRUMENT_ID, LIST_ID""", 
+                    [instrument_id, instrument_list_id, valid_from, valid_to]                    
+                )
+    
+    def create_instrument_identifier_relationship(self, instrument_id:int, instrument_identifier_id:int, valid_from: Optional[date] = None, valid_to: Optional[date] = None) -> int:
+        return self.post(
+                    f"""INSERT INTO instrument_identifier_relationship 
+                    (INSTRUMENT_ID, INSTRUMENT_IDENTIFIER_ID, VALID_FROM, VALID_TO) 
+                    VALUES (?, ?, ?, ?) RETURNING INSTRUMENT_ID, INSTRUMENT_IDENTIFIER_ID""", 
+                    [instrument_id, instrument_identifier_id, valid_from, valid_to]                    
+                )
+    
+    # STRATEGY METHODS
+
     def create_strategy_identifier(self, type: str, value: str) -> int:
         id_type = self.get_strategy_identifier_type(type)        
         return self.post("INSERT INTO strategy_identifier (TYPE_ID, VALUE) VALUES (?, ?) RETURNING ID", [id_type, value])
@@ -132,12 +238,13 @@ class db:
     def get_methodology_types(self) -> List[str]:
         m_types = self.get("SELECT DISTINCT NAME FROM methodology_types WHERE VALID_FROM <= current_date() AND VALID_TO >= current_date();")
         return [type['NAME'] for type in m_types]
-    
+        
     def get_methodology_by_type_id(self, type_id: int) -> List[str]:
         meths = self.get("SELECT FUNCTION_NAME FROM methodology WHERE TYPE_ID = ?", [type_id])
         return [meth['FUNCTION_NAME'] for meth in meths]
     
-    def get_methodology_by_type_name(self, type: str) -> List[str]:
+    # TODO: UPDATE FOR INIT MODE
+    def get_methodology_by_type_name(self, type: str, init_mode: bool = False) -> List[str]:
         meths = self.get("SELECT FUNCTION_NAME FROM methodology WHERE TYPE_ID = (SELECT ID FROM methodology_types WHERE NAME = ?)", [type.lower()])
         return [meth['FUNCTION_NAME'] for meth in meths]
     
@@ -146,7 +253,8 @@ class db:
         return id_type[0]['ID'] if id_type else None
 
     def create_methodology_type(self, name: str) -> int:
-        return self.post("INSERT INTO methodology_types (NAME) VALUES (?) RETURNING ID", [name.lower()])
+        type_id = self.post("INSERT INTO methodology_types (NAME) VALUES (?) RETURNING ID", [name.lower()])
+        return type_id[0]['ID']
     
     def get_methodology_types_by_strategy_id(self, strategy_id: int) -> List[str]:
         meths = self.get("SELECT DISTINCT NAME FROM methodology_types WHERE VALID_FROM <= current_date() AND VALID_TO >= current_date() AND ID IN (SELECT TYPE_ID FROM strategy_methodology_relationship WHERE STRATEGY_ID = ?)", [strategy_id])
@@ -178,3 +286,20 @@ class db:
             create_table_stmt += ",\n".join(columns) + "\n);"
 
         return create_table_stmt
+    
+    #TODO: INCORPORATE VALID_FROM AND VALID_TO
+    # INSTRUMENT METHODS
+    def add_instrument_to_list(self, strategy_id: int, list_name: str, instrument_identifier: str, instrument_identifier_type: str, instrument_type:str='EQUITY', valid_from: Optional[date] = None, valid_to: Optional[date] = None, init_mode: bool = False) -> None:
+        #Get id of instrument identifier type
+        instrument_identifier_type_id = self.get_instrument_identifier_type_id_by_name(instrument_identifier_type, valid_from, valid_to, init_mode=init_mode)
+        #Get id of instrument identifier
+        instrument_identifier_id = self.get_instrument_identifier_id_by_value(instrument_identifier, instrument_identifier_type_id, valid_from, valid_to, init_mode=init_mode)                                
+        #Get id of instrument type
+        instrument_type_id = self.get_instrument_type_id_by_name(instrument_type, valid_from, valid_to, init_mode=init_mode)
+        
+        #Get id of instrument using instrument identifier
+        instrument_id = self.get_instrument_id_by_identifier_id(instrument_type_id, instrument_identifier_id, valid_from, valid_to, init_mode=init_mode)
+        
+        instrument_identifier_relationship_id = self.create_instrument_identifier_relationship(instrument_id, instrument_identifier_id, valid_from, valid_to, init_mode=init_mode)
+        instrument_list_id = self.get_instrument_list_id_by_name(strategy_id,list_name, valid_from, valid_to, init_mode=init_mode)        
+        return self.add_instrument_to_instrument_list(instrument_id, instrument_list_id, valid_from, valid_to)

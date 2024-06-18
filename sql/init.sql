@@ -29,6 +29,9 @@ CREATE SEQUENCE seq_classification START 600000000;
 -- #IDENTIFIER
 CREATE SEQUENCE seq_identifier START 700000000;
 
+-- #FILE_LOG
+CREATE SEQUENCE seq_file_log START 800000000;
+
 
 -----------------------------------------------------------------------------------------------------------------
 -- #METHODOLOGY #TYPE
@@ -302,7 +305,7 @@ CREATE TABLE instrument_market_relationship (
 -- #INSTRUMENT #LIST #RELATIONSHIP
 CREATE TABLE instrument_list_relationship (
     INSTRUMENT_ID INTEGER NOT NULL,
-    FOREIGN KEY (INSTRUMENT_ID) REFERENCES instrument(ID),
+    FOREIGN KEY (INSTRUMENTS) REFERENCES instrument(ID),
     LIST_ID INTEGER NOT NULL,
     FOREIGN KEY (LIST_ID) REFERENCES instrument_list(ID),
     TYPE VARCHAR(255) DEFAULT 'REFERENCES',
@@ -329,6 +332,24 @@ CREATE TABLE instrument_list_strategy_relationship (
     UPDATED_BY VARCHAR(255) DEFAULT 'System',
     CREATED TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CREATED_BY VARCHAR(255) DEFAULT 'System',    
+);
+
+CREATE TABLE file_log (
+    ID INTEGER PRIMARY KEY DEFAULT nextval('seq_file_log'),
+    STRATEGY_ID INTEGER NOT NULL,
+    FOREIGN KEY (STRATEGY_ID) REFERENCES strategy(ID),
+    FILE_NAME VARCHAR(255),
+    FILE_SIZE INTEGER,
+    FILE_DATE DATE,
+    FILE_TIME TIME,
+    FILE_STATUS VARCHAR(255),
+    
+    VALID_FROM DATE DEFAULT CURRENT_DATE,
+    VALID_TO DATE DEFAULT '3000-12-31',
+    UPDATED TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UPDATED_BY VARCHAR(255) DEFAULT 'System',
+    CREATED TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CREATED_BY VARCHAR(255) DEFAULT 'System',
 );
 
 -- VIEWS ---------------------------------------------------------------------
