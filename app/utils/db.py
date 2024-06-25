@@ -100,7 +100,7 @@ class db:
         return self.post("INSERT INTO strategy_identifier_types (NAME) VALUES (?) RETURNING ID", [name])
 
     # INSTRUMENT METHODS
-    def get_instrument_type_id_by_name(self, name: str, init_mode: bool = False) -> int:
+    def get_instrument_type_id_by_name(self, name: str, valid_from: Optional[date] = None, valid_to: Optional[date] = None, init_mode: bool = False) -> int:
         id = self.get("SELECT ID FROM instrument_types WHERE NAME = ?", [name.lower()])
         if id:
             return id[0]['ID']
@@ -110,14 +110,20 @@ class db:
 
     def create_instrument_type(self, name: str) -> int:
         type_id = self.post("INSERT INTO instrument_types (NAME) VALUES (?) RETURNING ID", [name.lower()])
-        return type_id[0]['ID']
+        return type_id
     
-    def get_instrument_id_by_identifier_id(self, type_id: int, init_mode: bool = False) -> int:
-        id = self.get("SELECT ID FROM instruments WHERE TYPE_ID = ?", [type_id])
+    def create_instrument(self, instrument_type_id: int) -> int:
+        instrument_id = self.post("INSERT INTO instruments (TYPE_ID) VALUES (?) RETURNING ID", [instrument_type_id])
+        return instrument_id
+
+    def get_instrument_id_by_identifier_id(self, identifier_id: int, instrument_type_id:int = None, valid_from: Optional[date] = None, valid_to: Optional[date] = None, init_mode: bool = False) -> int:
+        id = self.get("SELECT INSTRUMENT_ID FROM instrument_identifier_relationship WHERE INSTRUMENT_IDENTIFIER_ID = ?", [identifier_id])
         if id:
-            return id[0]['ID']
-        elif init_mode:
-            return self.create_instrument(type_id)
+            return id[0]['INSTRUMENT_ID']
+        elif init_mode and instrument_type_id:
+            instrument_id = self.create_instrument(instrument_type_id)
+            self.create_instrument_identifier_relationship(instrument_id, identifier_id)
+            return instrument_id
         return None
     
     # TODO: UPDATE QUERY
@@ -291,15 +297,15 @@ class db:
     # INSTRUMENT METHODS
     def add_instrument_to_list(self, strategy_id: int, list_name: str, instrument_identifier: str, instrument_identifier_type: str, instrument_type:str='EQUITY', valid_from: Optional[date] = None, valid_to: Optional[date] = None, init_mode: bool = False) -> None:
         #Get id of instrument identifier type
-        instrument_identifier_type_id = self.get_instrument_identifier_type_id_by_name(instrument_identifier_type, valid_from, valid_to, init_mode=init_mode)
+        instrument_identifier_type_id = self.get_instrument_identifier_type_id_by_name(instrument_identifier_type, valid_from=valid_from, valid_to=valid_to, init_mode=init_mode)
         #Get id of instrument identifier
-        instrument_identifier_id = self.get_instrument_identifier_id_by_value(instrument_identifier, instrument_identifier_type_id, valid_from, valid_to, init_mode=init_mode)                                
+        instrument_identifier_id = self.get_instrument_identifier_id_by_value(instrument_identifier, instrument_identifier_type_id, valid_from=valid_from, valid_to=valid_to, init_mode=init_mode)                                
         #Get id of instrument type
-        instrument_type_id = self.get_instrument_type_id_by_name(instrument_type, valid_from, valid_to, init_mode=init_mode)
+        instrument_type_id = self.get_instrument_type_id_by_name(instrument_type, valid_from=valid_from, valid_to=valid_to, init_mode=init_mode)        
         
-        #Get id of instrument using instrument identifier
-        instrument_id = self.get_instrument_id_by_identifier_id(instrument_type_id, instrument_identifier_id, valid_from, valid_to, init_mode=init_mode)
+        #Get id of instrument using instrument identifier and type. Set if not exists        
+        instrument_id = self.get_instrument_id_by_identifier_id(instrument_identifier_id,instrument_type_id, valid_from=valid_from, valid_to=valid_to, init_mode=init_mode)
         
-        instrument_identifier_relationship_id = self.create_instrument_identifier_relationship(instrument_id, instrument_identifier_id, valid_from, valid_to, init_mode=init_mode)
+        #Get id of instrument list
         instrument_list_id = self.get_instrument_list_id_by_name(strategy_id,list_name, valid_from, valid_to, init_mode=init_mode)        
         return self.add_instrument_to_instrument_list(instrument_id, instrument_list_id, valid_from, valid_to)
