@@ -8,7 +8,7 @@ def get_db(db_loc: Optional[str] = None):
     return db(db_loc) if db_loc else db()
 
 class db:
-    def __init__(self, db_loc: str = './database.duckdb'):        
+    def __init__(self, db_loc: str = './database.duckdb'):
         self.db_loc = db_loc
 
     def get(self, query: str, params: Optional[List] = None) -> List[Dict]:
@@ -36,23 +36,49 @@ class db:
             con.execute(query, params)
             con.commit()
 
-    def dict_to_sql(self, table_name: str, conditions: Dict = None) -> str:
-        if not conditions:
-            return f"SELECT * FROM {table_name}"
-        where_clause = " AND ".join([f"{key}='{value}'" if isinstance(value, str) else f"{key}={value}" for key, value in conditions.items()])
-        return f"SELECT * FROM {table_name} WHERE {where_clause}"
+    def add_file_to_log(self, directory: str, file_name: str, file_size: int, file_type: str, file_status: str = 'NEW') -> None:
+        self.put(
+            "INSERT OR IGNORE INTO file_log (DIRECTORY, NAME, SIZE, TYPE, STATUS) VALUES (?, ?, ?, ?, ?)",
+            (directory, file_name, file_size, file_type, file_status)
+        )
 
-    def read_dir(self, directory: str, file_type: str) -> Generator[Dict, None, None]:
-        query = ddb.execute(f"SELECT * FROM '{directory}*.{file_type}'")
-        record_batch_reader = query.fetch_record_batch()
-        try:
-            while True:
-                chunk = record_batch_reader.read_next_batch()
-                if len(chunk) == 0:
-                    break
-                yield chunk.to_pylist()
-        except StopIteration:
-            pass
+    def get_files_ending_in_from_dir(self, directory: str, file_type: str) -> list[str]:
+        loc = f"{directory}*.{file_type}"
+        data = self.get("SELECT * FROM read_text( ? );", [loc])
+        [self.add_file_to_log(directory, file['filename'], file['size'], 'csv') for file in data]
+        return [file['filename'] for file in data]
+    
+    def get_file_log(self, directory: str, file_type: str, file_status: str = None) -> list[str]:
+        return self.get("SELECT * FROM file_log WHERE DIRECTORY = ? AND NAME = ? AND STATUS = ?", [directory, file_type, file_status])
+
+    def update_file_log(self, directory:str, file_name:str, file_status:str, content:str = None, size:int = None, last_modified:datetime = None) -> None:
+        self.put(
+            "UPDATE file_log SET STATUS = ?, CONTENT = ?, SIZE = ?, LAST_MODIFIED = ? WHERE DIRECTORY = ? AND NAME = ?",
+            [file_status, content, size, last_modified, directory, file_name]
+        )
+
+    def load_dir(self, directory: str, file_type: str) -> Generator[Dict, None, None]:
+        # Compare files in directory to files in database        
+        all_files = self.get_files_ending_in_from_dir(directory, file_type)
+        processed_files = self.get_file_log(directory, file_type, 'PROCESSED')
+        # Remove processed files from files list
+        new_files = [file for file in all_files if file not in processed_files]        
+        ## TODO: Check for files that have been updated
+        if file_type == 'csv':
+            for file in new_files:
+                query = ddb.execute(f"SELECT * FROM read_csv_auto(?)", [file])
+                record_batch_reader = query.fetch_record_batch()
+                self.update_file_log(directory, file, 'PROCESSED')
+                try:
+                    while True:
+                        chunk = record_batch_reader.read_next_batch()
+                        if len(chunk) == 0:
+                            break
+                        yield chunk.to_pylist()
+                except StopIteration:
+                    pass
+        else:
+            raise ValueError(f"File type {file_type} not supported")
 
     def convert_date(self, d: datetime) -> str:
         return d.strftime("%Y-%m-%d %H:%M:%S")

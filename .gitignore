@@ -160,4 +160,4 @@ cython_debug/
 #.idea/
 
 *duckdb.wal
-*.database.duckdb
+*.duckdb
