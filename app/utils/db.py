@@ -20,18 +20,19 @@ class db:
             column_names = [desc[0] for desc in con.description]
         return [dict(zip(column_names, row)) for row in rows] if rows else []
 
-    def post(self, query: str, params: Optional[List] = None):
+    # TODO: DO NOT COMMIT IF INIT MODE
+    def post(self, query: str, params: Optional[List] = None, init_mode: bool = False):
         with ddb.connect(self.db_loc) as con:
             con.execute(query, params)
             result = con.fetchone()
         return result[0] if result else None
 
-    def put(self, query: str, params: Optional[List] = None) -> None:
+    def put(self, query: str, params: Optional[List] = None, init_mode: bool = False) -> None:
         with ddb.connect(self.db_loc) as con:
             con.execute(query, params)
             con.commit()
 
-    def delete(self, query: str, params: Optional[List] = None) -> None:
+    def delete(self, query: str, params: Optional[List] = None, init_mode: bool = False) -> None:
         with ddb.connect(self.db_loc) as con:
             con.execute(query, params)
             con.commit()
@@ -45,12 +46,15 @@ class db:
     def get_files_ending_in_from_dir(self, directory: str, file_type: str) -> list[str]:
         loc = f"{directory}*.{file_type}"
         data = self.get("SELECT * FROM read_text( ? );", [loc])
-        [self.add_file_to_log(directory, file['filename'], file['size'], 'csv') for file in data]
+        #[self.add_file_to_log(directory, file['filename'], file['size'], 'csv') for file in data]
         return [file['filename'] for file in data]
     
     def get_file_log(self, directory: str, file_type: str, file_status: str = None) -> list[str]:
-        return self.get("SELECT * FROM file_log WHERE DIRECTORY = ? AND NAME = ? AND STATUS = ?", [directory, file_type, file_status])
+        return self.get("SELECT * FROM file_log WHERE DIRECTORY = ? AND TYPE = ? AND STATUS = ?", [directory, file_type, file_status])
 
+    def add_files_to_log_by_name(self, directory: str, file_names: list[str]) -> None:
+        data = self.get("SELECT * FROM read_text( ? );", [directory])
+        [self.add_file_to_log(directory, file['filename'], file['size'], 'csv') for file in data if file['filename'] in file_names]
     def update_file_log(self, directory:str, file_name:str, file_status:str, content:str = None, size:int = None, last_modified:datetime = None) -> None:
         self.put(
             "UPDATE file_log SET STATUS = ?, CONTENT = ?, SIZE = ?, LAST_MODIFIED = ? WHERE DIRECTORY = ? AND NAME = ?",
@@ -62,7 +66,8 @@ class db:
         all_files = self.get_files_ending_in_from_dir(directory, file_type)
         processed_files = self.get_file_log(directory, file_type, 'PROCESSED')
         # Remove processed files from files list
-        new_files = [file for file in all_files if file not in processed_files]        
+        new_files = [file for file in all_files if file not in [x['NAME'] for x in processed_files]]     
+        self.add_files_to_log_by_name(directory, new_files)
         ## TODO: Check for files that have been updated
         if file_type == 'csv':
             for file in new_files:
