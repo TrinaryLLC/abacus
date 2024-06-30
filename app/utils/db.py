@@ -112,6 +112,10 @@ class db:
     def get_strategy_types(self) -> List[str]:
         return [x['NAME'] for x in self.get("SELECT DISTINCT NAME FROM strategy_types WHERE VALID_FROM <= current_date() AND VALID_TO >= current_date();")]
 
+    def get_strategies(self) -> List[Dict]:
+        strategies = self.get("SELECT * FROM view_strategy_identifiers WHERE NAME='name'")
+        return strategies
+    
     def get_strategy_names(self) -> List[str]:        
         strategies = self.get("SELECT * FROM view_strategy_identifiers WHERE NAME='name'")
         return [x['VALUE'] for x in strategies]

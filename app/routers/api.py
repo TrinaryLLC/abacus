@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from typing import Dict, List, Optional
-from strategy.Strategy import Strategy
+from objects import Strategy
 
 from utils.db import db, get_db
 
