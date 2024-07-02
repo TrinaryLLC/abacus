@@ -1,7 +1,7 @@
 <div class="selector">
-    <ul name="strategy_selector" id="strategy_selector" hx-get="/strategies" hx-trigger="revealed" hx-target="#strategy_selector">
+    <ul name="strategy_selector" id="strategy_selector">
         {% for strategy in strategies %}
-        <li value="{{ strategy.ID }}">{{ strategy.VALUE }}</li>
+        <li><a href="/strategies/{{ strategy.ID }}">{{ strategy.VALUE }}</a></li>
         {% endfor %}
     </ul>
 </div>
