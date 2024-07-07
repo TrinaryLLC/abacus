@@ -1,5 +1,6 @@
 # abacus
-Simple financial index calculator.
+Local-first self hosted security and strategy management tool.
+Future versions will include a cloud-based version.
 
 # TODO
 - [x] Create table to track processed files as to not re-process files.
