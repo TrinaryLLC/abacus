@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ strategy.name }} - Strategy View</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <h1>Edit Strategy</h1>
+
+    <form method="post" action="/strategies/{{ strategy.id }}/edit">
+        <label for="name">Strategy Name:</label>
+        <input type="text" id="name" name="name" value="{{ strategy.name }}" required>
+        
+        <label for="description">Description:</label>
+        <textarea id="description" name="description" required>{{ strategy.description }}</textarea>
+
+        <button type="submit">Save</button>
+    </form>
+
+    <div>
+        <h2>Methodologies</h2>
+        <form method="post" action="/strategies/{{ strategy.id }}/methodologies/add">
+            <input type="text" name="methodology_name" placeholder="New Methodology" required>
+            <button type="submit">Add</button>
+        </form>
+        {% if strategy.methodologies %}
+        <ul>
+            {% for methodology in strategy.methodologies %}
+                <li>{{ methodology.name }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>No methodologies found for this strategy.</p>
+        {% endif %}
+    </div>
+
+    <div>
+        <h2>Instruments</h2>
+        <form method="post" action="/strategies/{{ strategy.id }}/instruments/add">
+            <input type="text" name="instrument_name" placeholder="New Instrument" required>
+            <button type="submit">Add</button>
+        </form>
+        {% if strategy.instruments %}
+        <ul>
+            {% for instrument in strategy.instruments %}
+                <li>{{ instrument.name }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>No instruments found for this strategy.</p>
+        {% endif %}
+    </div>
+
+    <div>
+        <h2>Classifications</h2>
+        <form method="post" action="/strategies/{{ strategy.id }}/classifications/add">
+            <input type="text" name="classification_name" placeholder="New Classification" required>
+            <button type="submit">Add</button>
+        </form>
+        {% if strategy.classifications %}
+        <ul>
+            {% for classification in strategy.classifications %}
+                <li>{{ classification.name }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>No classifications found for this strategy.</p>
+        {% endif %}
+    </div>
+
+    <a href="/">Back to Home</a>
+</body>
+</html>

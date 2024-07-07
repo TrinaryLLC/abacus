@@ -120,6 +120,9 @@ class db:
         strategies = self.get("SELECT * FROM view_strategy_identifiers WHERE NAME='name'")
         return [x['VALUE'] for x in strategies]
 
+    def get_strategy_by_id(self, strategy_id: int) -> Dict:
+        return self.get("SELECT * FROM strategy WHERE ID = ?", [strategy_id])
+
     def get_strategy_by_name(self, strategy_name: str, start: Optional[date] = None, stop: Optional[date] = None) -> Strategy:
         return self.get("SELECT * FROM strategy WHERE strategy_type = ?", [strategy_name])
 
@@ -143,6 +146,9 @@ class db:
             return self.create_instrument_type(name)
         return None
 
+    def get_instruments_by_strategy_id(self, strategy_id: int) -> dict:
+        return self.get("SELECT * FROM instruments WHERE TYPE_ID IN (SELECT ID FROM instrument_types WHERE ID IN (SELECT TYPE_ID FROM instrument_list_relationship WHERE LIST_ID IN (SELECT ID FROM instrument_list WHERE NAME IN (SELECT VALUE FROM view_strategy_identifiers WHERE ID = ?))))", [strategy_id])
+
     def create_instrument_type(self, name: str) -> int:
         type_id = self.post("INSERT INTO instrument_types (NAME) VALUES (?) RETURNING ID", [name.lower()])
         return type_id
@@ -150,6 +156,21 @@ class db:
     def create_instrument(self, instrument_type_id: int) -> int:
         instrument_id = self.post("INSERT INTO instruments (TYPE_ID) VALUES (?) RETURNING ID", [instrument_type_id])
         return instrument_id
+
+    def get_all_classifications(self) -> dict:
+        return self.get("SELECT * FROM instrument_classifications")
+    
+    def get_classifications_by_strategy_id(self, strategy_id: int) -> dict:
+        return self.get("SELECT * FROM instrument_classifications WHERE INSTRUMENT_ID IN (SELECT ID FROM instruments WHERE TYPE_ID IN (SELECT ID FROM instrument_types WHERE ID IN (SELECT TYPE_ID FROM instrument_list_relationship WHERE LIST_ID IN (SELECT ID FROM instrument_list WHERE NAME IN (SELECT VALUE FROM view_strategy_identifiers WHERE ID = ?)))))", [strategy_id])
+
+    def get_classifications_by_instrument_id(self, instrument_id: int) -> dict:
+        return self.get("SELECT * FROM instrument_classifications WHERE INSTRUMENT_ID = ?", [instrument_id])
+    
+    def get_all_instruments(self) -> dict:
+        return self.get("SELECT * FROM view_instruments")
+
+    def get_instrument_identifiers_by_instrument_id(self, instrument_id: int) -> dict:
+        return self.get("SELECT * FROM instrument_identifier WHERE INSTRUMENT_ID = ?", [instrument_id])
 
     def get_instrument_id_by_identifier_id(self, identifier_id: int, instrument_type_id:int = None, valid_from: Optional[date] = None, valid_to: Optional[date] = None, init_mode: bool = False) -> int:
         id = self.get("SELECT INSTRUMENT_ID FROM instrument_identifier_relationship WHERE INSTRUMENT_IDENTIFIER_ID = ?", [identifier_id])
@@ -181,6 +202,9 @@ class db:
     
     def instrument_identifier_type_exists(self, name: str) -> bool:
         return True if self.get("SELECT 1 FROM instrument_identifier_types WHERE NAME = ?", [name.lower()]) else False
+
+    def get_instrument_by_id(self, instrument_id: int) -> dict:
+        return self.get("SELECT * FROM instruments WHERE ID = ?", [instrument_id])
 
     #TODO: INCORPORATE VALID_FROM AND VALID_TO
     def get_instrument_identifier_id_by_value(self, value: str, type_id: int,  valid_from: Optional[date] = None, valid_to: Optional[date] = None, init_mode: bool = False) -> int:
@@ -258,6 +282,10 @@ class db:
                 self.post("INSERT INTO strategy_identifier_relationship (STRATEGY_ID, STRATEGY_IDENTIFIER_ID, TYPE) VALUES (?, ?, 'REFERENCES')", [strategy_id, id_key])
         return strategy_id
 
+    def get_strategy_identifiers_by_strategy_id(self, strategy_id: int) -> dict:
+        return self.get("SELECT VALUE FROM view_strategy_identifiers WHERE ID = ?", [strategy_id])
+        #return [identifier['VALUE'] for identifier in identifiers]
+
     def get_strategy_name_by_id(self, strategy_id: int) -> str:
         name = self.get("SELECT VALUE FROM view_strategy_identifiers WHERE NAME='name' and ID = ?", [strategy_id])
         return name[0]['VALUE'] if name else None
@@ -272,6 +300,9 @@ class db:
             [type_id, meth['function_repo'], meth['function_branch'], meth['function_file'], meth['function_name'], meth['function_description']]
         )
 
+    def get_all_methodologies(self) -> dict:
+        return self.get("SELECT * FROM methodology")
+    
     def get_methodology_id_by_name(self, name: str) -> Optional[int]:
         id_type = self.get("SELECT ID FROM methodology WHERE FUNCTION_NAME = ?", [name.lower()])
         return id_type[0]['ID'] if id_type else None
@@ -296,6 +327,9 @@ class db:
     def create_methodology_type(self, name: str) -> int:
         type_id = self.post("INSERT INTO methodology_types (NAME) VALUES (?) RETURNING ID", [name.lower()])
         return type_id[0]['ID']
+    
+    def get_methodologies_by_strategy_id(self, strategy_id: int) -> dict:
+        return self.get("SELECT * FROM methodology WHERE TYPE_ID IN (SELECT ID FROM methodology_types WHERE ID IN (SELECT TYPE_ID FROM strategy_methodology_relationship WHERE STRATEGY_ID = ?))", [strategy_id])
     
     def get_methodology_types_by_strategy_id(self, strategy_id: int) -> List[str]:
         meths = self.get("SELECT DISTINCT NAME FROM methodology_types WHERE VALID_FROM <= current_date() AND VALID_TO >= current_date() AND ID IN (SELECT TYPE_ID FROM strategy_methodology_relationship WHERE STRATEGY_ID = ?)", [strategy_id])

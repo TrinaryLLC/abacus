@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ instrument.name }} - Instrument View</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <h1>{{ instrument.name }}</h1>
+    <p>{{ instrument.description }}</p>
+
+    <div>
+        <h2>Classifications</h2>
+        {% if instrument.classifications %}
+        <ul>
+            {% for classification in instrument.classifications %}
+                <li>{{ classification.name }}: {{ classification.description }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>No classifications found for this instrument.</p>
+        {% endif %}
+    </div>
+
+    <div>
+        <h2>Identifiers</h2>
+        {% if instrument.identifiers %}
+        <ul>
+            {% for identifier in instrument.identifiers %}
+                <li>{{ identifier.name }}: {{ identifier.value }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>No identifiers found for this instrument.</p>
+        {% endif %}
+    </div>
+
+    <a href="/">Back to Home</a>
+</body>
+</html>

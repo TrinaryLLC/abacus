@@ -216,7 +216,7 @@ CREATE TABLE instrument_classifications (
 );
 
 -- #STRATEGY #IDENTIFIER #RELATIONSHIP
-CREATE TABLE strategy_identifier_relationship (
+CREATE OR REPLACE TABLE strategy_identifier_relationship (
     STRATEGY_ID INTEGER NOT NULL,
     FOREIGN KEY (STRATEGY_ID) REFERENCES strategy(ID),
     STRATEGY_IDENTIFIER_ID INTEGER NOT NULL,    
@@ -235,7 +235,7 @@ CREATE TABLE strategy_identifier_relationship (
 );
 
 -- #INSTRUMENT #IDENTIFIER #RELATIONSHIP
-CREATE TABLE instrument_identifier_relationship (
+CREATE OR REPLACE TABLE instrument_identifier_relationship (
     INSTRUMENT_ID INTEGER NOT NULL,
     FOREIGN KEY (INSTRUMENT_ID) REFERENCES instruments(ID),
     INSTRUMENT_IDENTIFIER_ID INTEGER NOT NULL,    
@@ -417,6 +417,27 @@ JOIN methodology_types mt ON m.TYPE_ID=mt.ID
 WHERE s.VALID_FROM<=current_date() AND s.VALID_TO>=current_date()
 AND smr.VALID_FROM<=current_date() AND smr.VALID_TO>=current_date()
 AND mt.VALID_FROM<=current_date() AND mt.VALID_TO>=current_date()
+);
+
+CREATE VIEW view_instruments AS (
+SELECT i.ID, it.NAME as TYPE, ii.VALUE as TICKER--, *
+FROM instruments i
+JOIN instrument_types it ON i.TYPE_ID=it.ID
+JOIN instrument_identifier_relationship iir ON iir.INSTRUMENT_ID=i.ID 
+JOIN instrument_identifier ii on iir.INSTRUMENT_IDENTIFIER_ID = ii.ID
+JOIN instrument_identifier_types iit on ii.TYPE_ID=iit.ID
+WHERE iit.name = 'ticker'
+AND i.VALID_FROM<=current_date() AND i.VALID_TO>=current_date()
+--AND iir.VALID_FROM<=current_date() AND iir.VALID_TO>=current_date()
+--AND ii.VALID_FROM<=current_date() AND ii.VALID_TO>=current_date()
+);
+
+
+CREATE VIEW view_classifications AS (
+SELECT c.ID, c.NAME, c.DESCRIPTION, it.NAME AS TYPE_NAME, it.DESCRIPTION AS TYPE_DESCRIPTION
+FROM instrument_classifications c
+JOIN instrument_classification_types it ON c.TYPE_ID=it.ID
+WHERE c.VALID_FROM<=current_date() AND c.VALID_TO>=current_date()
 );
 
 -- FUNCTIONS ------------------------------------------------------------------
