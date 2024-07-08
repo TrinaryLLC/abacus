@@ -166,6 +166,9 @@ class db:
     def get_classifications_by_instrument_id(self, instrument_id: int) -> dict:
         return self.get("SELECT * FROM instrument_classifications WHERE INSTRUMENT_ID = ?", [instrument_id])
     
+    def get_instrument_batch(self, offset: int = 0, limit: int = 100) -> dict:
+        return self.get("SELECT * FROM view_instruments LIMIT ? OFFSET ?", [limit, offset])
+    
     def get_all_instruments(self) -> dict:
         return self.get("SELECT * FROM view_instruments")
 

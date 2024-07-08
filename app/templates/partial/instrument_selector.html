@@ -1,5 +1,9 @@
 <ul>
-    {% for instrument in instruments %}
-    <li><a href="/instrument/{{ instrument.ID }}">{{ instrument.TYPE }}: {{ instrument.TICKER }}</a></li>
-    {% endfor %}
+    {% for instrument in instruments %}            
+        {% if loop.index0 == instruments | length -1 %}            
+            <li><a hx-get="/instruments?offset={{ offset + 10 }}&limit=10" hx-trigger="revealed" hx-swap="afterend" href="/instrument/{{ instrument.ID }}">{{ instrument.TYPE }}: {{ instrument.TICKER }}</a></li>                
+        {% else %}
+            <li><a href="/instrument/{{ instrument.ID }}">{{ instrument.TYPE }}: {{ instrument.TICKER }}</a></li>
+        {% endif %}
+    {% endfor %}            
 </ul>

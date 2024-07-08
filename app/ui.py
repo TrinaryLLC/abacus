@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Query
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from utils.db import db
@@ -14,7 +14,8 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 @app.get("/")
 async def read_root(request: Request):
     strategies = db.get_strategies()
-    return templates.TemplateResponse("page/index.html", {"request": request, "title": "My FastAPI App","strategies": strategies})
+    instruments = db.get_instrument_batch(0, 10)
+    return templates.TemplateResponse("page/index.html", {"request": request, "title": "My FastAPI App","strategies": strategies,"instruments": instruments, "offset":0})
 
 # View strategy types
 @app.get("type/strategies")
@@ -67,11 +68,16 @@ async def read_methodologies(request: Request):
     methodologies = db.get_all_methodologies()
     return templates.TemplateResponse("partial/methodology_selector.html", {"request": request, "methodologies": methodologies})
 
-# Return all instruments
+# @app.get("/more-instruments")
+# async def read_more_instruments(request: Request, offset: int = Query(0), limit: int = Query(10)):
+#     instruments = db.get_instrument_batch(offset, limit)
+#     return templates.TemplateResponse("partial/instrument_selector.html", {"request": request, "instruments": instruments})
+
+# Return all instruments paginated
 @app.get("/instruments")
-async def read_instruments(request: Request):
-    instruments = db.get_all_instruments()
-    return templates.TemplateResponse("partial/instrument_selector.html", {"request": request, "instruments": instruments})
+async def read_instruments(request: Request, offset: int = Query(0), limit: int = Query(10)):
+    instruments = db.get_instrument_batch(offset, limit)
+    return templates.TemplateResponse("partial/instrument_selector.html", {"request": request, "instruments": instruments, "offset":offset, "limit":limit})
 
 # Return information for a specific instrument
 @app.get("/instrument/{instrument_id}")
